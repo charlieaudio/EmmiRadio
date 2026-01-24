@@ -1,5 +1,5 @@
 # EmmiRadio
-A simple internet radio with the cheapest solution
+A simple internet radio with the cheapest solution (XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD)
 
    -------------------------------------------------------------------------
    SOFTWARE SETUP (for EmmiRadio – XIAO ESP32S3 Plus)

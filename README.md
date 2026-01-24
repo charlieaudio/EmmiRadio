@@ -94,17 +94,17 @@ A simple internet radio with the cheapest solution (XIAO ESP32S3 Plus + PCM5102 
    FEATURE OVERVIEW (EmmiRadio Firmware)
    -------------------------------------------------------------------------
 
-   ✓ High-quality Web Radio Player using PCM5102 I2S DAC
-   ✓ Clean Web UI with Play/Stop/Prev/Next controls
-   ✓ Editable station list (JSON lines stored in SPIFFS)
-   ✓ Wi-Fi configuration page (SSID + Password stored in /WiFi.json)
-   ✓ Station metadata display (ICY StreamTitle via callbacks + fallback HTTP polling)
-   ✓ 16×2 I2C LCD interface with marquee scrolling on long titles
-   ✓ 30-second LCD backlight power-save (any button wakes it)
-   ✓ Button controls with proper software debounce
-   ✓ Automatic AP fallback mode if Wi-Fi fails
-   ✓ Volume control via Web UI (+/– buttons)
-   ✓ Web-based OTA firmware update at /update
+   - High-quality Web Radio Player using PCM5102 I2S DAC   
+   - Clean Web UI with Play/Stop/Prev/Next controls
+   - Editable station list (JSON lines stored in SPIFFS)
+   - Wi-Fi configuration page (SSID + Password stored in /WiFi.json)
+   - Station metadata display (ICY StreamTitle via callbacks + fallback HTTP polling)
+   - 16×2 I2C LCD interface with marquee scrolling on long titles
+   - 30-second LCD backlight power-save (any button wakes it)
+   - Button controls with proper software debounce
+   - Automatic AP fallback mode if Wi-Fi fails
+   - Volume control via Web UI (+/– buttons)
+   - Web-based OTA firmware update at /update
 
    Files stored on the device:
      /radios.json   – station list (one JSON per line)
@@ -115,6 +115,7 @@ A simple internet radio with the cheapest solution (XIAO ESP32S3 Plus + PCM5102 
      http://<device-ip>/stations   → Station editor (add / edit / delete / reorder)
      http://<device-ip>/wifi       → Wi-Fi settings
      http://<device-ip>/update     → Firmware Update (Web OTA)
+     
    EmmiRadio v1.2 – E.M.M.I. = Extremely Minimal Music Interface
    XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD + Web UI + OTA + WiFi list
-   ------------------------------------------------------------------------- */
+   -------------------------------------------------------------------------

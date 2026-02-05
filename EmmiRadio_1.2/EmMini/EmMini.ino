@@ -1,122 +1,6 @@
 /* -------------------------------------------------------------------------
-   SOFTWARE SETUP (for EmmiRadio – XIAO ESP32S3 Plus)
-   -------------------------------------------------------------------------
-   1) Install ESP32 board support
-      - Open: File → Preferences → "Additional Boards Manager URLs"
-      - Add this URL:
-        https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-
-      - Open: Tools → Board → Boards Manager
-      - Install: "ESP32 by Espressif Systems"  (recommended: v3.3.4 or newer)
-
-   2) Select the correct board in Arduino IDE
-      Tools → Board → esp32 → "XIAO_ESP32S3_PLUS"
-      (If missing, select: "ESP32S3 Dev Module")
-
-      Recommended settings:
-        - USB CDC On Boot:         Enabled
-        - CPU Frequency:           240 MHz
-        - Flash Size:              16MB (128Mb)
-        - Flash Mode:              QIO 80MHz
-        - PSRAM:                   Enabled (OPI)
-        - Partition Scheme:        Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)
-        - Upload Speed:            921600 (or 460800 if unstable)
-        - Programmer:              esptool (default)
-
-   3) Required Arduino Libraries (install from Library Manager)
-      - ESP32-audioI2S   by Phil Schatzmann  (Audio.h)
-      - LiquidCrystal_I2C (any compatible version, e.g. by Frank de Brabander)
-
-      NOTE:
-      WiFi.h, WebServer.h, Wire.h, SPIFFS.h and Update.h
-      come automatically with the ESP32 board package.
-
-   4) Recommended Tools
-      - Use Arduino IDE 2.x (for stable ESP32S3 USB/JTAG support)
-      - Enable verbose upload logs if debugging USB issues
-
-   After installing everything:
-      - Connect the XIAO ESP32S3 Plus via USB-C
-      - Select the correct COM port
-      - Upload this sketch
-
-   -------------------------------------------------------------------------
-   HARDWARE SETUP (EmmiRadio – XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD)
-   -------------------------------------------------------------------------
-
-   Board:
-     - Seeed Studio XIAO ESP32S3 Plus (the non-Plus also works)
-       (8MB PSRAM, 16MB Flash, USB-C)
-
-   Audio DAC (I2S):
-     - Module: PCM5102 or PCM510x compatible
-     - Connect as follows:
-         XIAO D2  (GPIO 3)  →  PCM5102 BCK
-         XIAO D3  (GPIO 4)  →  PCM5102 LRCK / WS
-         XIAO D1  (GPIO 2)  →  PCM5102 DIN
-     - Power:
-         PCM5102 VCC → 5V
-         PCM5102 GND → GND
-
-   LCD Display (I2C 16×2, addr 0x27 or 0x3F):
-     - Connect:
-         XIAO SDA (GPIO 5) → LCD SDA
-         XIAO SCL (GPIO 6) → LCD SCL
-         LCD VCC → 5V (or 3.3V depending on module)
-         LCD GND → GND
-
-   Buttons (momentary, active LOW):
-     - Use simple push-buttons to GND.
-       Internal pull-ups are enabled in software.
-         XIAO D0  (GPIO 1)   →  PLAY / STOP
-         XIAO D6  (GPIO 43)  →  NEXT
-         XIAO D7  (GPIO 44)  →  PREV
-
-   Optional Volume Switch:
-     - XIAO GPIO 35 (analog-capable pin)
-       The sketch supports volume control via Web UI,
-       but you may connect a hardware switch for fixed gain levels.
-
-   Power:
-     - USB-C from computer or a 5V USB power supply.
-     - Ensure all modules (LCD, PCM5102, buttons) share a common GND.
-
-   Important Notes:
-     - PCM5102 works best at 44.1kHz / 48kHz I2S streams.
-     - Use proper wiring lengths; I2S is sensitive to noise.
-     - If LCD shows garbled text, double-check the I2C address.
-     - The radio will fall back to AP mode if Wi-Fi is not configured.
-
-   -------------------------------------------------------------------------
-   FEATURE OVERVIEW (EmmiRadio Firmware)
-   -------------------------------------------------------------------------
-
-   ✓ High-quality Web Radio Player using PCM5102 I2S DAC
-   ✓ Clean Web UI with Play/Stop/Prev/Next controls
-   ✓ Editable station list (JSON lines stored in SPIFFS)
-   ✓ Wi-Fi configuration page (SSID + Password stored in /WiFi.json)
-   ✓ Station metadata display (ICY StreamTitle via callbacks + fallback HTTP polling)
-   ✓ 16×2 I2C LCD interface with marquee scrolling on long titles
-   ✓ 30-second LCD backlight power-save (any button wakes it)
-   ✓ Button controls with proper software debounce
-   ✓ Automatic AP fallback mode if Wi-Fi fails
-   ✓ Volume control via Web UI (+/– buttons)
-   ✓ Web-based OTA firmware update at /update
-
-   Files stored on the device:
-     /radios.json   – station list (one JSON per line)
-     /WiFi.json     – Wi-Fi credentials
-
-   Web Interfaces:
-     http://<device-ip>/           → Main page + controls
-     http://<device-ip>/stations   → Station editor (add / edit / delete / reorder)
-     http://<device-ip>/wifi       → Wi-Fi settings
-     http://<device-ip>/update     → Firmware Update (Web OTA)
-
-   ------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------
-   EmmiRadio v1.2 – E.M.M.I. = Extremely Minimal Music Interface
-   XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD + Web UI + OTA + WiFi list
+   EmMini – headless EmmiRadio (XIAO ESP32S3 Plus)
+   Minimalist: no LCD, no buttons, web-only control.
    ------------------------------------------------------------------------- */
 
 #include <Arduino.h>
@@ -125,16 +9,12 @@
 #include <WiFiClient.h>
 #include <Audio.h>
 #include <Update.h>
-#include <Wire.h>
 #include <SPIFFS.h>
-#include <LiquidCrystal_I2C.h>
 
-const char* FW_VERSION = "1.2";
+const char* FW_VERSION = "1.2-emmini";
 
 // Forward declarations
-void handleSettingsPost();
-void safeLcdPrint(const String& l1, const String& l2);
-void lcdPrintLine(uint8_t row, const String& s16);
+void safeStatusPrint(const String& l1, const String& l2);
 void startMarquee(const String& full);
 void tickMarquee();
 void showNowPlaying();
@@ -154,19 +34,6 @@ bool saveStations();
 void startWebServer();
 void tryIcyFallback();
 String fetchIcyTitleOnce(const String& url, uint32_t overallTimeoutMs=5000);
-
-// LCD
-#define LCD_ADDR 0x27
-LiquidCrystal_I2C lcd(LCD_ADDR, 16, 2);
-bool lcdBacklightOff = false;
-unsigned long lastActivityMs = 0;
-const unsigned long LCD_SLEEP_MS = 30000;
-bool powerSaveEnabled = true;   // LCD power save on-off
-
-// Buttons
-const int PIN_BTN_NEXT = 43;
-const int PIN_BTN_PREV = 44;
-const int PIN_BTN_PLAY = 1;
 
 // I2S pins
 const int PIN_I2S_BCK  = 3;
@@ -189,7 +56,6 @@ const int MAX_WIFI = 8;
 WifiEntry wifiList[MAX_WIFI];
 int wifiCount = 0;
 const char* WIFI_CFG_PATH = "/WiFi.json";
-const char* SETTINGS_PATH = "/settings.json";
 
 WebServer server(80);
 
@@ -200,34 +66,7 @@ bool gotMeta = false;
 unsigned long playStartMs = 0;
 const unsigned long META_TIMEOUT_MS = 5000;
 
-// Debounce
-struct DebBtn { int pin; bool stable; bool lastStable; unsigned long lastChangeMs; };
-const unsigned long DEBOUNCE_MS = 30;
-inline bool rawPressed(int pin){ return digitalRead(pin)==LOW; }
-DebBtn BTN_NEXT{PIN_BTN_NEXT, true, true, 0};
-DebBtn BTN_PREV{PIN_BTN_PREV, true, true, 0};
-DebBtn BTN_PLAY{PIN_BTN_PLAY, true, true, 0};
-
-void initBtn(DebBtn& b){
-  pinMode(b.pin, INPUT_PULLUP);
-  bool r = rawPressed(b.pin);
-  b.stable = b.lastStable = r;
-  b.lastChangeMs = millis();
-}
-
-bool btnPressedEvent(DebBtn& b){
-  unsigned long now = millis();
-  bool raw = rawPressed(b.pin);
-  if (raw != b.stable && (now - b.lastChangeMs) >= DEBOUNCE_MS){
-    b.lastStable = b.stable;
-    b.stable = raw;
-    b.lastChangeMs = now;
-    if (b.lastStable == true && b.stable == false) return true; // press
-  }
-  return false;
-}
-
-// Marquee
+// Marquee (no-op in headless mode)
 bool marqueeActive = false;
 String marqueeText = "";
 int marqueePos = 0;
@@ -243,26 +82,15 @@ int currentVolume = 12;
 const int VOL_MIN = 0;
 const int VOL_MAX = 21;
 
-// ---------- LCD helpers ----------
-void lcdPrintLine(uint8_t row, const String& s16){
-  String t = s16;
-  if (t.length() < 16) { while (t.length() < 16) t += ' '; }
-  else if (t.length() > 16) t.remove(16);
-  lcd.setCursor(0, row);
-  lcd.print(t);
-}
-
-void safeLcdPrint(const String& l1, const String& l2){
-  lcd.clear();
-  lcd.setCursor(0,0); lcd.print(l1.substring(0,16));
-  lcd.setCursor(0,1); lcd.print(l2.substring(0,16));
-  lastActivityMs = millis();
+// ---------- Status helpers ----------
+void safeStatusPrint(const String& l1, const String& l2){
+  Serial.println("[STATUS] " + l1 + " | " + l2);
 }
 
 void showIpOnLcd(){
   IPAddress ip = (WiFi.getMode()==WIFI_MODE_AP || WiFi.status()!=WL_CONNECTED)
                  ? WiFi.softAPIP() : WiFi.localIP();
-  safeLcdPrint("EmmiRadio v"+String(FW_VERSION), ip.toString());
+  safeStatusPrint("EmMini v"+String(FW_VERSION), ip.toString());
 }
 
 // ---------- Marquee ----------
@@ -271,21 +99,13 @@ void startMarquee(const String& full){
   marqueePos = 0;
   lastMarqueeMs = millis();
   marqueeActive = (marqueeText.length() > 16);
-  if (!marqueeActive) lcdPrintLine(1, full);
 }
 
 void tickMarquee(){
   if (!marqueeActive) return;
   if (millis() - lastMarqueeMs < MARQUEE_PERIOD_MS) return;
   lastMarqueeMs = millis();
-
-  String w;
-  int L = marqueeText.length();
-  for (int i = 0; i < 16; i++){
-    w += marqueeText[(marqueePos + i) % L];
-  }
-  lcdPrintLine(1, w);
-  marqueePos = (marqueePos + 1) % L;
+  marqueePos = (marqueePos + 1) % marqueeText.length();
 }
 
 // ---------- Now playing ----------
@@ -294,16 +114,15 @@ void showNowPlaying(){
   String line2;
 
   if (gotMeta && lastTitle.length()){
-    lcdPrintLine(0, line1);
+    safeStatusPrint(line1, lastTitle);
     startMarquee(lastTitle);
     return;
   }
 
   marqueeActive = false;
-  lcdPrintLine(0, line1);
   if (isPlaying && (millis() - playStartMs) > META_TIMEOUT_MS) line2 = "PLAY";
   else line2 = "Connecting...";
-  lcdPrintLine(1, line2);
+  safeStatusPrint(line1, line2);
 }
 
 // ---------- URL shortener ----------
@@ -329,9 +148,6 @@ String jsonLineStation(const String& name,const String& url){
 }
 String jsonLineWifi(const String& ssid,const String& pass){
   return "{\"ssid\":\""+ssid+"\",\"pass\":\""+pass+"\"}";
-}
-String jsonLineSettings(bool powerSave){
-  return String("{\"ps\":\"") + (powerSave ? "1" : "0") + "\"}";
 }
 
 // ---------- Stations ----------
@@ -394,35 +210,6 @@ bool saveWiFiList(){
   return true;
 }
 
-// ---------- Settings ----------
-bool loadSettings(){
-  if(!SPIFFS.exists(SETTINGS_PATH)) return false;
-  File f=SPIFFS.open(SETTINGS_PATH,"r"); if(!f) return false;
-  String l=f.readStringUntil('\n'); l.trim();
-  f.close();
-  if(l.length()<3) return false;
-  String ps=jsonGet(l,"ps");
-  if(ps.length()){
-    powerSaveEnabled = (ps == "1" || ps == "true");
-    return true;
-  }
-  return false;
-}
-
-bool saveSettings(){
-  File f=SPIFFS.open(SETTINGS_PATH,"w"); if(!f) return false;
-  f.println(jsonLineSettings(powerSaveEnabled));
-  f.close();
-  return true;
-}
-
-void handleSettingsPost(){
-  // Ha érkezik 'ps' paraméter, akkor be van pipálva
-  powerSaveEnabled = server.hasArg("ps");
-  saveSettings();
-  redirectHome();
-}
-
 // ---------- HTML helpers ----------
 String htmlHeader(const String& title){
   return "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -460,20 +247,14 @@ String pageIndex(){
   String st=isPlaying?"PLAYING":"STOPPED";
   String ip=(WiFi.status()==WL_CONNECTED)?WiFi.localIP().toString():WiFi.softAPIP().toString();
   String cur=(stationCount>0)?stations[currentStation].name:"(no stations)";
-  String h=htmlHeader("EmmiRadio");
-  h+="<div class='card'><h2>EmmiRadio <small class='version'>v"+String(FW_VERSION)+"</small></h2>";
+  String h=htmlHeader("EmMini");
+  h+="<div class='card'><h2>EmMini <small class='version'>v"+String(FW_VERSION)+"</small></h2>";
   h+="<div class='row'><b>Status:</b> "+st+"</div>";
   h+="<div class='row'><b>Station:</b> "+cur+"</div>";
   h+="<div class='row'><b>IP:</b> "+ip+"</div>";
   h+="<div class='row'><b>Volume:</b> "+String(currentVolume)+
      " <a class='btn' href='/api/vol_down'>-</a>"
      " <a class='btn' href='/api/vol_up'>+</a></div>";
-  h+="<div class='row'><form method='POST' action='/settings'>";
-  h+="<label><input type='checkbox' name='ps' value='1' ";
-  if (powerSaveEnabled) h+="checked";
-  h+="> LCD power save (30s)</label> ";
-  h+="<button type='submit'>Apply</button>";
-  h+="</form></div>";
   h+="<div class='row'>"
      "<a class='btn' href='/api/prev'>⏮ Prev</a>"
      "<a class='btn' href='/api/play'>▶ Play</a>"
@@ -611,7 +392,7 @@ String fetchIcyTitleOnce(const String& url, uint32_t overallTimeoutMs){
   String req = String("GET ") + path + " HTTP/1.0\r\n"
                "Host: " + host + "\r\n"
                "Icy-MetaData: 1\r\n"
-               "User-Agent: EmmiRadio/1.1\r\n"
+               "User-Agent: EmMini/1.2\r\n"
                "Connection: close\r\n\r\n";
   client.print(req);
 
@@ -686,12 +467,13 @@ void tryIcyFallback(){
     showNowPlaying();
   }
 }
+
 // ---------- OTA handlers ----------
 void handleOtaUpload(){
   HTTPUpload& upload = server.upload();
 
   if(upload.status == UPLOAD_FILE_START){
-    safeLcdPrint("UPDATING...", "Please wait");
+    safeStatusPrint("UPDATING...", "Please wait");
     Serial.println("[OTA] Update start");
     if(!Update.begin()){
       Serial.println("[OTA] Update.begin() failed");
@@ -725,7 +507,7 @@ void applyVolume(){
 void doPlay(){
   if(stationCount==0) return;
   if(WiFi.status()!=WL_CONNECTED){
-    safeLcdPrint("No WiFi","Cannot PLAY");
+    safeStatusPrint("No WiFi","Cannot PLAY");
     return;
   }
   lastTitle=""; gotMeta=false; playStartMs=millis(); marqueeActive=false;
@@ -742,7 +524,7 @@ void doStop(){
   isPlaying = false;
   gotMeta = false;
   marqueeActive = false;
-  safeLcdPrint(stations[currentStation].name,"STOP");
+  safeStatusPrint(stations[currentStation].name,"STOP");
 }
 
 void changeStation(int delta){
@@ -755,7 +537,7 @@ void changeStation(int delta){
     audio.connecttohost(stations[currentStation].url.c_str());
     showNowPlaying();
   } else {
-    safeLcdPrint(stations[currentStation].name,"STOP");
+    safeStatusPrint(stations[currentStation].name,"STOP");
   }
 }
 
@@ -801,7 +583,7 @@ void handleWifiPost(){
   }
 
   saveWiFiList();
-  bool ok = connectWiFiSmart(7000, 3);   // itt lehet elég 3, mert ezt a user hívja kézzel
+  bool ok = connectWiFiSmart(7000, 3);   // user-triggered; fewer retries
 
   String note = "Saved.";
   if(ok && WiFi.status()==WL_CONNECTED){
@@ -929,7 +711,6 @@ void startWebServer(){
   server.on("/api/st_up",     HTTP_GET, handleStUp);
   server.on("/api/st_down",   HTTP_GET, handleStDown);
   server.on("/api/st_select", HTTP_GET, handleStSelect);
-  server.on("/settings", HTTP_POST, handleSettingsPost);
 
   // OTA
   server.on("/update", HTTP_GET, handleOtaPage);
@@ -955,10 +736,10 @@ bool connectWiFiSmart(unsigned long timeoutPerNetMs, int maxAttempts) {
   WiFi.setAutoReconnect(false);
   WiFi.persistent(false);
 
-  WiFi.disconnect(true, true);    // teljes reset
+  WiFi.disconnect(true, true);    // full reset
   delay(200);
 
-  // --- 1) SCAN: megnézzük, mely mentett SSID-k vannak hatótávon belül ---
+  // --- 1) SCAN: check saved SSIDs in range ---
   Serial.println("[WiFi] Scanning for networks...");
   int n = WiFi.scanNetworks();
   if (n <= 0) {
@@ -990,16 +771,16 @@ bool connectWiFiSmart(unsigned long timeoutPerNetMs, int maxAttempts) {
     return false;
   }
 
-  // --- 2) Többszöri próbálkozás CSAK az elérhető, ismert SSID-kre ---
+  // --- 2) Try only visible known SSIDs ---
   for (int attempt = 0; attempt < maxAttempts; attempt++) {
     Serial.println(String("[WiFi] Connect attempt ") + (attempt+1) + "/" + maxAttempts);
 
     for (int i = 0; i < wifiCount; i++) {
-      if (!knownVisible[i]) continue;   // ezt az SSID-t most nem látjuk
+      if (!knownVisible[i]) continue;
 
       Serial.println(String("[WiFi] Trying saved SSID: ") + wifiList[i].ssid);
 
-      WiFi.disconnect();    // előző próbálkozás biztosan leálljon
+      WiFi.disconnect();
       delay(200);
 
       WiFi.begin(wifiList[i].ssid.c_str(), wifiList[i].pass.c_str());
@@ -1036,25 +817,17 @@ bool connectWiFiSmart(unsigned long timeoutPerNetMs, int maxAttempts) {
 
 void startAP(){
   WiFi.mode(WIFI_AP);
-  WiFi.softAP("EmmiRadio-Setup","emmipass");
-  Serial.println("[WiFi] AP mode: EmmiRadio-Setup / emmipass");
+  WiFi.softAP("EmMini-Setup","emmipass");
+  Serial.println("[WiFi] AP mode: EmMini-Setup / emmipass");
 }
 
 // ---------- Setup / Loop ----------
 void setup(){
   Serial.begin(115200);
   delay(200);
-  Wire.begin(5,6);
-  lcd.init();
-  lcd.backlight();
-  safeLcdPrint("EmmiRadio v1.1","Boot...");
+  safeStatusPrint("EmMini","Boot...");
 
   SPIFFS.begin(true);
-  loadSettings();
-
-  initBtn(BTN_PLAY);
-  initBtn(BTN_NEXT);
-  initBtn(BTN_PREV);
 
   audio.setPinout(PIN_I2S_BCK, PIN_I2S_LRCK, PIN_I2S_DATA);
   applyVolume();
@@ -1064,49 +837,19 @@ void setup(){
     saveStations();
   }
 
-  bool wifiOk = loadWiFiList() && connectWiFiSmart(7000, 5);   // 5 tries
+  bool wifiOk = loadWiFiList() && connectWiFiSmart(7000, 5);
   if(!wifiOk) startAP();
 
   startWebServer();
   showIpOnLcd();
-
-  lastActivityMs = millis();
-  lcdBacklightOff = false;
-  }
+}
 
 void loop(){
   audio.loop();
   server.handleClient();
   tickMarquee();
 
-  // LCD power save
-  if (powerSaveEnabled && !lcdBacklightOff && (millis()-lastActivityMs > LCD_SLEEP_MS)){
-  lcd.noBacklight();
-  lcdBacklightOff = true;
-  }
-
-
-  // Button handling
-  if (btnPressedEvent(BTN_PLAY)){
-    lastActivityMs = millis();
-    if(lcdBacklightOff){ lcd.backlight(); lcdBacklightOff=false; }
-    if(!isPlaying) doPlay();
-    else doStop();
-  }
-
-  if (btnPressedEvent(BTN_NEXT)){
-    lastActivityMs = millis();
-    if(lcdBacklightOff){ lcd.backlight(); lcdBacklightOff=false; }
-    changeStation(+1);
-  }
-
-  if (btnPressedEvent(BTN_PREV)){
-    lastActivityMs = millis();
-    if(lcdBacklightOff){ lcd.backlight(); lcdBacklightOff=false; }
-    changeStation(-1);
-  }
-
-  // Keep LCD alive while waiting for metadata
+  // Keep status alive while waiting for metadata
   if(isPlaying && !gotMeta){
     static unsigned long lastRefresh=0;
     if(millis()-lastRefresh>1000){

@@ -11,7 +11,7 @@
 #include <Update.h>
 #include <SPIFFS.h>
 
-const char* FW_VERSION = "1.2-emmini";
+const char* FW_VERSION = "0.0";
 
 // Forward declarations
 void safeStatusPrint(const String& l1, const String& l2);
@@ -34,6 +34,10 @@ bool saveStations();
 void startWebServer();
 void tryIcyFallback();
 String fetchIcyTitleOnce(const String& url, uint32_t overallTimeoutMs=5000);
+
+// Buttons (momentary, active LOW)
+const int PIN_BTN_NEXT = 43;
+const int PIN_BTN_PLAY = 1;
 
 // I2S pins
 const int PIN_I2S_BCK  = 3;
@@ -66,6 +70,13 @@ bool gotMeta = false;
 unsigned long playStartMs = 0;
 const unsigned long META_TIMEOUT_MS = 5000;
 
+// Debounce
+struct DebBtn { int pin; bool stable; bool lastStable; unsigned long lastChangeMs; };
+const unsigned long DEBOUNCE_MS = 30;
+inline bool rawPressed(int pin){ return digitalRead(pin)==LOW; }
+DebBtn BTN_NEXT{PIN_BTN_NEXT, true, true, 0};
+DebBtn BTN_PLAY{PIN_BTN_PLAY, true, true, 0};
+
 // Marquee (no-op in headless mode)
 bool marqueeActive = false;
 String marqueeText = "";
@@ -85,6 +96,25 @@ const int VOL_MAX = 21;
 // ---------- Status helpers ----------
 void safeStatusPrint(const String& l1, const String& l2){
   Serial.println("[STATUS] " + l1 + " | " + l2);
+}
+
+void initBtn(DebBtn& b){
+  pinMode(b.pin, INPUT_PULLUP);
+  bool r = rawPressed(b.pin);
+  b.stable = b.lastStable = r;
+  b.lastChangeMs = millis();
+}
+
+bool btnPressedEvent(DebBtn& b){
+  unsigned long now = millis();
+  bool raw = rawPressed(b.pin);
+  if (raw != b.stable && (now - b.lastChangeMs) >= DEBOUNCE_MS){
+    b.lastStable = b.stable;
+    b.stable = raw;
+    b.lastChangeMs = now;
+    if (b.lastStable == true && b.stable == false) return true; // press
+  }
+  return false;
 }
 
 void showIpOnLcd(){
@@ -829,6 +859,9 @@ void setup(){
 
   SPIFFS.begin(true);
 
+  initBtn(BTN_PLAY);
+  initBtn(BTN_NEXT);
+
   audio.setPinout(PIN_I2S_BCK, PIN_I2S_LRCK, PIN_I2S_DATA);
   applyVolume();
 
@@ -848,6 +881,16 @@ void loop(){
   audio.loop();
   server.handleClient();
   tickMarquee();
+
+  // Button handling
+  if (btnPressedEvent(BTN_PLAY)){
+    if(!isPlaying) doPlay();
+    else doStop();
+  }
+
+  if (btnPressedEvent(BTN_NEXT)){
+    changeStation(+1);
+  }
 
   // Keep status alive while waiting for metadata
   if(isPlaying && !gotMeta){

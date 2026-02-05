@@ -1,4 +1,4 @@
-# EmMini (headless)
+# EmMiniRadio (headless)
 
 Minimal EmmiRadio variant without LCD. Hardware buttons kept for **Play/Stop** and **Next**.
 

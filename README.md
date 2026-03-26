@@ -23,6 +23,7 @@ A simple internet radio with the cheapest solution (XIAO ESP32S3 Plus + PCM5102 
         - Flash Mode:              QIO 80MHz
         - PSRAM:                   Enabled (OPI)
         - Partition Scheme:        Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)
+                                    In case you didn't find this option, select the ESP32S3 dev board!
         - Upload Speed:            921600 (or 460800 if unstable)
         - Programmer:              esptool (default)
 
@@ -119,3 +120,146 @@ A simple internet radio with the cheapest solution (XIAO ESP32S3 Plus + PCM5102 
    EmmiRadio v1.2 – E.M.M.I. = Extremely Minimal Music Interface
    XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD + Web UI + OTA + WiFi list
    -------------------------------------------------------------------------
+
+## 📡 First setup / initial configuration
+
+On first boot (or if no known Wi-Fi network is available), EmmiRadio automatically starts in **Access Point (AP) mode**.
+
+### 🔹 Step-by-step:
+
+1. Power on the device
+
+2. It will create a Wi-Fi network:
+
+   **SSID:** `EmmiRadio-Setup`
+   **Password:** `emmipass`
+
+3. Connect to this network using your phone or computer
+
+4. Open a browser and go to:
+
+👉 http://192.168.4.1
+
+---
+
+### ⚙️ What you can do here:
+
+* Add your home Wi-Fi network
+* Add / edit radio stations
+* Control playback
+* Update firmware (OTA)
+* Configure settings (e.g. display power saving)
+
+---
+
+### 🔁 After saving Wi-Fi:
+
+* The device will try to connect to your network
+* If successful:
+
+  * It switches to **client mode**
+  * Displays its new IP address on the screen
+
+---
+
+### 📶 Normal operation
+
+Once connected to your Wi-Fi:
+
+* Open the device in your browser using its IP address
+  (shown on display or router)
+
+Example:
+
+```
+http://192.168.1.123
+```
+
+---
+
+### ❗ Fallback behavior
+
+If the device cannot connect to any saved network:
+
+* It will automatically return to **AP mode**
+* You can reconnect to:
+
+```
+EmmiRadio-Setup
+```
+
+and reconfigure it again.
+
+---
+
+## 🖥️ Display selection (LCD / OLED)
+
+Display type is selected at compile time.
+
+In `EmmiRadio_1.4.ino`:
+
+```cpp
+#define DISPLAY_TYPE DISPLAY_TYPE_LCD
+```
+
+### Options:
+
+* `DISPLAY_TYPE_LCD` → 16x2 I2C LCD
+* `DISPLAY_TYPE_OLED` → SSD1306 OLED (128x64)
+
+### OLED requirements:
+
+Install libraries:
+
+* Adafruit GFX
+* Adafruit SSD1306
+
+If OLED is not detected, try changing I2C address:
+
+```cpp
+#define OLED_ADDR 0x3C
+```
+
+or
+
+```cpp
+#define OLED_ADDR 0x3D
+```
+
+---
+
+## 🔄 OTA update
+
+Firmware can be updated via web interface:
+
+* Go to `/update`
+* Upload compiled `.bin`
+
+⚠️ Important:
+
+The firmware contains the display type.
+
+* LCD build → use with LCD
+* OLED build → use with OLED
+
+Wrong build will not brick the device, but the display may not work.
+
+---
+
+## 💡 Notes
+
+* Designed to work even in restricted / corporate networks
+* No mDNS dependency
+* Always rely on IP address shown on the display
+
+---
+
+## 🚀 Future ideas
+
+* Native OLED UI (not 16x2 emulation)
+* VU meter / spectrum
+* Multi-device control
+
+---
+
+Enjoy the radio 🤘

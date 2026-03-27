@@ -1,226 +1,152 @@
 # EmmiRadio
-A simple internet radio with the cheapest solution (XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD)
 
-   -------------------------------------------------------------------------
-   SOFTWARE SETUP (for EmmiRadio – XIAO ESP32S3 Plus)
-   -------------------------------------------------------------------------
-   1) Install ESP32 board support
-      - Open: File → Preferences → "Additional Boards Manager URLs"
-      - Add this URL:
-        https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+ESP32-based WiFi internet radio with web UI, OTA update, FFat storage, and selectable LCD / OLED support.
 
-      - Open: Tools → Board → Boards Manager
-      - Install: "ESP32 by Espressif Systems"  (recommended: v3.3.4 or newer)
+## Current stable version
 
-   2) Select the correct board in Arduino IDE
-      Tools → Board → esp32 → "XIAO_ESP32S3_PLUS"
-      (If missing, select: "ESP32S3 Dev Module")
+**Recommended version:** `EmmiRadio_1.61`
 
-      Recommended settings:
-        - USB CDC On Boot:         Enabled
-        - CPU Frequency:           240 MHz
-        - Flash Size:              16MB (128Mb)
-        - Flash Mode:              QIO 80MHz
-        - PSRAM:                   Enabled (OPI)
-        - Partition Scheme:        Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)
-                                    In case you didn't find this option, select the ESP32S3 dev board!
-        - Upload Speed:            921600 (or 460800 if unstable)
-        - Programmer:              esptool (default)
-
-   3) Required Arduino Libraries (install from Library Manager)
-      - ESP32-audioI2S   by Phil Schatzmann  (Audio.h)
-      - LiquidCrystal_I2C (any compatible version, e.g. by Frank de Brabander)
-
-      NOTE:
-      WiFi.h, WebServer.h, Wire.h, SPIFFS.h and Update.h
-      come automatically with the ESP32 board package.
-
-   4) Recommended Tools
-      - Use Arduino IDE 2.x (for stable ESP32S3 USB/JTAG support)
-      - Enable verbose upload logs if debugging USB issues
-
-   After installing everything:
-      - Connect the XIAO ESP32S3 Plus via USB-C
-      - Select the correct COM port
-      - Upload this sketch
-
-   -------------------------------------------------------------------------
-   HARDWARE SETUP (EmmiRadio – XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD)
-   -------------------------------------------------------------------------
-
-   Board:
-     - Seeed Studio XIAO ESP32S3 Plus (the non-Plus also works)
-       (8MB PSRAM, 16MB Flash, USB-C)
-
-   Audio DAC (I2S):
-     - Module: PCM5102 or PCM510x compatible
-     - Connect as follows:
-         XIAO D2  (GPIO 3)  →  PCM5102 BCK
-         XIAO D3  (GPIO 4)  →  PCM5102 LRCK / WS
-         XIAO D1  (GPIO 2)  →  PCM5102 DIN
-     - Power:
-         PCM5102 VCC → 5V
-         PCM5102 GND → GND
-
-   LCD Display (I2C 16×2, addr 0x27 or 0x3F):
-     - Connect:
-         XIAO SDA (GPIO 5) → LCD SDA
-         XIAO SCL (GPIO 6) → LCD SCL
-         LCD VCC → 5V (or 3.3V depending on module)
-         LCD GND → GND
-
-   Buttons (momentary, active LOW):
-     - Use simple push-buttons to GND.
-       Internal pull-ups are enabled in software.
-         XIAO D0  (GPIO 1)   →  PLAY / STOP
-         XIAO D6  (GPIO 43)  →  NEXT
-         XIAO D7  (GPIO 44)  →  PREV
-
-   Optional Volume Switch:
-     - XIAO GPIO 35 (analog-capable pin)
-       The sketch supports volume control via Web UI,
-       but you may connect a hardware switch for fixed gain levels.
-
-   Power:
-     - USB-C from computer or a 5V USB power supply.
-     - Ensure all modules (LCD, PCM5102, buttons) share a common GND.
-
-   Important Notes:
-     - PCM5102 works best at 44.1kHz / 48kHz I2S streams.
-     - Use proper wiring lengths; I2S is sensitive to noise.
-     - If LCD shows garbled text, double-check the I2C address.
-     - The radio will fall back to AP mode if Wi-Fi is not configured.
-
-   -------------------------------------------------------------------------
-   FEATURE OVERVIEW (EmmiRadio Firmware)
-   -------------------------------------------------------------------------
-
-   - High-quality Web Radio Player using PCM5102 I2S DAC   
-   - Clean Web UI with Play/Stop/Prev/Next controls
-   - Editable station list (JSON lines stored in SPIFFS)
-   - Wi-Fi configuration page (SSID + Password stored in /WiFi.json)
-   - Station metadata display (ICY StreamTitle via callbacks + fallback HTTP polling)
-   - 16×2 I2C LCD interface with marquee scrolling on long titles
-   - 30-second LCD backlight power-save (any button wakes it)
-   - Button controls with proper software debounce
-   - Automatic AP fallback mode if Wi-Fi fails
-   - Volume control via Web UI (+/– buttons)
-   - Web-based OTA firmware update at /update
-
-   Files stored on the device:
-     /radios.json   – station list (one JSON per line)
-     /WiFi.json     – Wi-Fi credentials
-
-   Web Interfaces:
-     http://<device-ip>/           → Main page + controls
-     http://<device-ip>/stations   → Station editor (add / edit / delete / reorder)
-     http://<device-ip>/wifi       → Wi-Fi settings
-     http://<device-ip>/update     → Firmware Update (Web OTA)
-     
-   EmmiRadio v1.2 – E.M.M.I. = Extremely Minimal Music Interface
-   XIAO ESP32S3 Plus + PCM5102 + 16x2 I2C LCD + Web UI + OTA + WiFi list
-   -------------------------------------------------------------------------
-
-## 📡 First setup / initial configuration
-
-On first boot (or if no known Wi-Fi network is available), EmmiRadio automatically starts in **Access Point (AP) mode**.
-
-### 🔹 Step-by-step:
-
-1. Power on the device
-
-2. It will create a Wi-Fi network:
-
-   **SSID:** `EmmiRadio-Setup`
-   **Password:** `emmipass`
-
-3. Connect to this network using your phone or computer
-
-4. Open a browser and go to:
-
-👉 http://192.168.4.1
+Older versions were experimental steps and are kept only where needed.
 
 ---
 
-### ⚙️ What you can do here:
+## Main features
 
-* Add your home Wi-Fi network
-* Add / edit radio stations
-* Control playback
-* Update firmware (OTA)
-* Configure settings (e.g. display power saving)
-
----
-
-### 🔁 After saving Wi-Fi:
-
-* The device will try to connect to your network
-* If successful:
-
-  * It switches to **client mode**
-  * Displays its new IP address on the screen
+* WiFi internet radio
+* Web control interface
+* OTA firmware update
+* FFat-based persistent storage
+* WiFi credential storage
+* Editable station list
+* LCD 16x2 or SSD1306 OLED support
+* AP fallback mode
+* Metadata / stream title support
+* Physical button control
+* Display power save
 
 ---
 
-### 📶 Normal operation
+## Recommended board settings
 
-Once connected to your Wi-Fi:
+Use these settings in Arduino IDE:
 
-* Open the device in your browser using its IP address
-  (shown on display or router)
+* **Board:** `XIAO_ESP32S3_PLUS`
+* **Flash Size:** `16MB (128Mb)`
+* **Partition Scheme:** `16M Flash (3MB APP/9.9MB FATFS)`
+* **Erase All Flash Before Upload:** `Enabled` for first clean upload
+
+---
+
+## First boot / setup
+
+If the device cannot connect to a saved WiFi network, it starts in **AP mode**.
+
+### Access Point details
+
+* **SSID:** `EmmiRadio-Setup`
+* **Password:** `emmipass`
+
+Connect to that network with your phone or computer, then open:
+
+```text
+http://192.168.4.1
+```
+
+From there you can:
+
+* add or update WiFi networks
+* add or edit radio stations
+* control playback
+* update firmware
+* change settings
+
+---
+
+## Normal operation
+
+If a saved WiFi network is found and connection succeeds:
+
+* the device switches to **STA mode**
+* it gets an IP address from your router
+* the IP is shown on the display
+* the same IP is printed to Serial Monitor
 
 Example:
 
-```
+```text
 http://192.168.1.123
 ```
 
 ---
 
-### ❗ Fallback behavior
+## AP fallback behavior
 
-If the device cannot connect to any saved network:
+If no saved WiFi is available, or connection fails:
 
-* It will automatically return to **AP mode**
-* You can reconnect to:
+* EmmiRadio restores **AP mode**
+* you can reconnect to:
 
-```
-EmmiRadio-Setup
-```
+  * `EmmiRadio-Setup`
+  * password: `emmipass`
+* then open:
 
-and reconfigure it again.
+  * `http://192.168.4.1`
 
 ---
 
-## 🖥️ Display selection (LCD / OLED)
+## Files stored on FFat
 
-Display type is selected at compile time.
+The firmware stores its data in FFat:
 
-In `EmmiRadio_1.4.ino`:
+```text
+/WiFi.json
+/radios.json
+/settings.json
+```
+
+### Purpose
+
+* `/WiFi.json` → saved WiFi credentials
+* `/radios.json` → saved station list
+* `/settings.json` → saved settings such as display power save
+
+---
+
+## Display selection
+
+In `EmmiRadio_1.61.ino`, choose the display type here:
 
 ```cpp
 #define DISPLAY_TYPE DISPLAY_TYPE_LCD
 ```
 
-### Options:
+### Available options
 
-* `DISPLAY_TYPE_LCD` → 16x2 I2C LCD
-* `DISPLAY_TYPE_OLED` → SSD1306 OLED (128x64)
+```cpp
+DISPLAY_TYPE_LCD
+DISPLAY_TYPE_OLED
+```
 
-### OLED requirements:
+### LCD mode
 
-Install libraries:
+Uses a standard 16x2 I2C LCD.
+
+### OLED mode
+
+Uses SSD1306 OLED.
+
+If using OLED, install:
 
 * Adafruit GFX
 * Adafruit SSD1306
 
-If OLED is not detected, try changing I2C address:
+If needed, adjust OLED I2C address:
 
 ```cpp
 #define OLED_ADDR 0x3C
 ```
 
-or
+or:
 
 ```cpp
 #define OLED_ADDR 0x3D
@@ -228,38 +154,86 @@ or
 
 ---
 
-## 🔄 OTA update
+## OTA update
 
-Firmware can be updated via web interface:
+Open the device in a browser and go to:
 
-* Go to `/update`
-* Upload compiled `.bin`
+```text
+http://<device-ip>/update
+```
 
-⚠️ Important:
+Upload the compiled `.bin` file.
 
-The firmware contains the display type.
+### Important
+
+The firmware includes the selected display backend.
+
+That means:
 
 * LCD build → use with LCD
 * OLED build → use with OLED
 
-Wrong build will not brick the device, but the display may not work.
+Uploading the wrong build usually will not brick the board, but the display may not work correctly.
 
 ---
 
-## 💡 Notes
+## Serial output
 
-* Designed to work even in restricted / corporate networks
-* No mDNS dependency
-* Always rely on IP address shown on the display
+Version `1.61` provides more useful Serial logging, including:
+
+* firmware version
+* selected display type
+* filesystem type
+* number of saved WiFi entries
+* number of stations
+* current mode (AP / STA)
+* IP address
+* RSSI in STA mode
+* AP credentials in fallback mode
 
 ---
 
-## 🚀 Future ideas
+## Hardware notes
 
-* Native OLED UI (not 16x2 emulation)
-* VU meter / spectrum
-* Multi-device control
+### Audio
+
+Uses I2S audio output.
+
+### WiFi
+
+Make sure the WiFi antenna is actually connected.
+Yes, this turned out to matter. Quite a lot.
+
+### Network compatibility
+
+ESP32 uses **2.4 GHz WiFi**, not 5 GHz only networks.
 
 ---
 
-Enjoy the radio 🤘
+## Stable version summary
+
+### Keep
+
+* `EmmiRadio_1.2`
+* `EmmiRadio_1.61`
+
+### Remove
+
+* `EmmiRadio_1.3`
+* `EmmiRadio_1.4`
+* `EmmiRadio_1.5`
+* `EmmiRadio_1.6`
+
+---
+
+## Final note
+
+If it fails, check:
+
+1. power
+2. wiring
+3. partition scheme
+4. antenna
+5. whether the network is actually 2.4 GHz
+
+In that order. Saves time, swearing, and unnecessary existential questions.

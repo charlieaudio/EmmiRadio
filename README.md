@@ -25,15 +25,32 @@ Older versions were experimental steps and are kept only where needed.
 * Display power save
 
 ---
+## Arduino IDE setup
+
+* **Install these libraries**
+* Under File-Preferences add this line to boards manager field:
+  https://espressif.github.io/arduino-esp32/package_esp32_index.json
+* Tools / Board / Boards Manager
+ look for: esp32
+ install:
+  esp32 by Espressif Systems
+* Library manager - install these:
+  ESP32-audioI2S
+  LiquidCrystal_I2C
+  * For OLED screen:
+  Adafruit GFX Library
+  Adafruit SSD1306
 
 ## Recommended board settings
 
 Use these settings in Arduino IDE:
 
-* **Board:** `XIAO_ESP32S3_PLUS`
+* **Board:** `ESP32S3 Dev Module`
 * **Flash Size:** `16MB (128Mb)`
 * **Partition Scheme:** `16M Flash (3MB APP/9.9MB FATFS)`
 * **Erase All Flash Before Upload:** `Enabled` for first clean upload
+* **PSRAM:** `OPI PSRAM`
+* **USB CDC On Boot:** `Enabled`
 
 ---
 

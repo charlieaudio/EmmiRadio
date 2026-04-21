@@ -4,7 +4,7 @@ ESP32-based WiFi internet radio with web UI, OTA update, FFat storage, and selec
 
 ## Current stable version
 
-**Recommended version:** `EmmiRadio_1.61`
+**Recommended version:** `EmmiRadio_1.8`
 
 Older versions were experimental steps and are kept only where needed.
 
@@ -91,7 +91,7 @@ If a saved WiFi network is found and connection succeeds:
 Example:
 
 ```text
-http://192.168.1.123
+http://192.168.0.10
 ```
 
 ---
@@ -128,21 +128,6 @@ The firmware stores its data in FFat:
 * `/settings.json` → saved settings such as display power save
 
 ---
-
-## Display selection
-
-In `EmmiRadio_1.61.ino`, choose the display type here:
-
-```cpp
-#define DISPLAY_TYPE DISPLAY_TYPE_LCD
-```
-
-### Available options
-
-```cpp
-DISPLAY_TYPE_LCD
-DISPLAY_TYPE_OLED
-```
 
 ### LCD mode
 
@@ -196,7 +181,7 @@ Uploading the wrong build usually will not brick the board, but the display may 
 
 ## Serial output
 
-Version `1.61` provides more useful Serial logging, including:
+Version `1.8` provides more useful Serial logging, including:
 
 * firmware version
 * selected display type
@@ -232,7 +217,6 @@ ESP32 uses **2.4 GHz WiFi**, not 5 GHz only networks.
 ### Keep
 
 * `EmmiRadio_1.2`
-* `EmmiRadio_1.61`
 
 ### Remove
 
